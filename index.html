@@ -40,6 +40,11 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
   <style>
+    /* Evita o Flash de Conteúdo Não Compilado (FOUC) antes do Vue carregar */
+    [v-cloak] {
+      display: none !important;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       -webkit-tap-highlight-color: transparent;
@@ -64,6 +69,10 @@
     }
 
     /* Brilhos de Raridade */
+    .glow-rank-s-plus {
+      box-shadow: 0 0 45px rgba(239, 68, 68, 0.7), inset 0 0 20px rgba(251, 191, 36, 0.5);
+      animation: pulse-s-plus 1.5s infinite alternate;
+    }
     .glow-rank-s {
       box-shadow: 0 0 35px rgba(250, 204, 21, 0.6), inset 0 0 15px rgba(250, 204, 21, 0.3);
       animation: pulse-s 2s infinite alternate;
@@ -78,6 +87,10 @@
       box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
     }
 
+    @keyframes pulse-s-plus {
+      from { box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), inset 0 0 15px rgba(251, 191, 36, 0.4); }
+      to { box-shadow: 0 0 60px rgba(251, 191, 36, 0.95), inset 0 0 25px rgba(239, 68, 68, 0.7); }
+    }
     @keyframes pulse-s {
       from { box-shadow: 0 0 25px rgba(250, 204, 21, 0.5); }
       to { box-shadow: 0 0 45px rgba(250, 204, 21, 0.85); }
@@ -95,7 +108,7 @@
   </div>
 
   <!-- Aplicação Vue -->
-  <div id="app" class="relative z-10 w-full max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[90vh]">
+  <div id="app" v-cloak class="relative z-10 w-full max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[90vh]">
 
     <!-- ========================================== -->
     <!-- TELA 1: INÍCIO / LOBBY                     -->
@@ -358,11 +371,13 @@
           if (!cartaAtual.value) return;
           cartaAtual.value.revelado = true;
 
-          // Se for Rank S ou Rank A, soltar confetes
-          if (cartaAtual.value.rank === 'S') {
-            dispararConfetes(true);
+          // Efeitos de raridade sonora/visual
+          if (cartaAtual.value.rank === 'S+') {
+            dispararConfetes('S+');
+          } else if (cartaAtual.value.rank === 'S') {
+            dispararConfetes('S');
           } else if (cartaAtual.value.rank === 'A') {
-            dispararConfetes(false);
+            dispararConfetes('A');
           }
         };
 
@@ -375,7 +390,7 @@
             animandoTransicao.value = true;
 
             // Tempo para contemplar a carta antes de passar automaticamente
-            const tempoEspera = (cartaAtual.value.rank === 'S' || cartaAtual.value.rank === 'A') ? 1600 : 1200;
+            const tempoEspera = (cartaAtual.value.rank === 'S+') ? 2000 : ((cartaAtual.value.rank === 'S' || cartaAtual.value.rank === 'A') ? 1600 : 1200);
 
             timerTransicao = setTimeout(() => {
               avancarParaProximaOuGeral();
@@ -418,6 +433,7 @@
 
         const obterClasseBorda = (card) => {
           switch (card.rank) {
+            case 'S+': return 'border-amber-300 ring-4 ring-amber-400/80';
             case 'S': return 'border-yellow-400';
             case 'A': return 'border-purple-500';
             case 'B': return 'border-sky-500';
@@ -430,6 +446,7 @@
         const obterClasseBrilho = (card) => {
           if (!card.revelado) return '';
           switch (card.rank) {
+            case 'S+': return 'glow-rank-s-plus';
             case 'S': return 'glow-rank-s';
             case 'A': return 'glow-rank-a';
             case 'B': return 'glow-rank-b';
@@ -473,19 +490,36 @@
           }
         };
 
-        const dispararConfetes = (isLendario) => {
+        const dispararConfetes = (tipo) => {
           if (typeof confetti === 'function') {
-            confetti({
-              particleCount: isLendario ? 120 : 60,
-              spread: isLendario ? 90 : 60,
-              origin: { y: 0.6 },
-              colors: isLendario ? ['#facc15', '#eab308', '#ffffff', '#fb923c'] : ['#a855f7', '#c084fc', '#ffffff']
-            });
+            if (tipo === 'S+') {
+              confetti({
+                particleCount: 160,
+                spread: 120,
+                origin: { y: 0.55 },
+                colors: ['#ef4444', '#facc15', '#f59e0b', '#ffffff', '#38bdf8']
+              });
+            } else if (tipo === 'S') {
+              confetti({
+                particleCount: 100,
+                spread: 90,
+                origin: { y: 0.6 },
+                colors: ['#facc15', '#eab308', '#ffffff', '#fb923c']
+              });
+            } else {
+              confetti({
+                particleCount: 60,
+                spread: 60,
+                origin: { y: 0.6 },
+                colors: ['#a855f7', '#c084fc', '#ffffff']
+              });
+            }
           }
         };
 
         const copiarResultado = async () => {
           const rankIcons = {
+            'S+': '🔥 [RANK S+]',
             'S': '🟡 [RANK S]',
             'A': '🟣 [RANK A]',
             'B': '🔵 [RANK B]',
