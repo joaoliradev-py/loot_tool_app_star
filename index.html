@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ferramenta de Loot - RPG STAR</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            konoha: {
+              orange: '#c2410c',
+              terracotta: '#9a3412',
+              dark: '#1c1917',
+              wood: '#292524'
+            }
+          },
+          fontFamily: {
+            title: ['"Cinzel"', 'serif'],
+            sans: ['"Inter"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter e Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .font-title {
+      font-family: 'Cinzel', serif;
+    }
+
+    /* Animação 3D de Virada de Carta */
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    .transform-style-3d {
+      transform-style: preserve-3d;
+    }
+    .backface-hidden {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .rotate-y-180 {
+      transform: rotateY(180deg);
+    }
+
+    /* Brilhos de Raridade */
+    .glow-rank-s {
+      box-shadow: 0 0 35px rgba(250, 204, 21, 0.6), inset 0 0 15px rgba(250, 204, 21, 0.3);
+      animation: pulse-s 2s infinite alternate;
+    }
+    .glow-rank-a {
+      box-shadow: 0 0 30px rgba(168, 85, 247, 0.5), inset 0 0 12px rgba(168, 85, 247, 0.2);
+    }
+    .glow-rank-b {
+      box-shadow: 0 0 25px rgba(14, 165, 233, 0.45);
+    }
+    .glow-rank-c {
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+    }
+
+    @keyframes pulse-s {
+      from { box-shadow: 0 0 25px rgba(250, 204, 21, 0.5); }
+      to { box-shadow: 0 0 45px rgba(250, 204, 21, 0.85); }
+    }
+  </style>
+</head>
+<body class="min-h-screen w-full relative flex items-center justify-center p-3 sm:p-6 bg-stone-950 overflow-x-hidden selection:bg-orange-500 selection:text-white">
+
+  <!-- Imagem de fundo de Konoha com overlay -->
+  <div 
+    class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+    style="background-image: url('assets/konoha_1.jpeg');"
+  >
+    <div class="absolute inset-0 bg-stone-950/75 backdrop-blur-[2px]"></div>
+  </div>
+
+  <!-- Aplicação Vue -->
+  <div id="app" class="relative z-10 w-full max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[90vh]">
+
+    <!-- ========================================== -->
+    <!-- TELA 1: INÍCIO / LOBBY                     -->
+    <!-- ========================================== -->
+    <div 
+      v-if="tela === 'inicio'" 
+      class="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-7 sm:p-8 text-center border border-stone-200 transition-all duration-300"
+    >
+      <h1 class="text-2xl sm:text-3xl font-black text-stone-900 tracking-wider font-title uppercase">
+        FERRAMENTA DE LOOT
+      </h1>
+      <p class="text-sm sm:text-base font-bold text-konoha-orange tracking-widest uppercase mt-1">
+        (RPG STAR)
+      </p>
+
+      <div class="w-16 h-1 bg-konoha-orange mx-auto my-5 rounded-full"></div>
+
+      <button 
+        @click="iniciarMineracao"
+        class="w-full py-4 px-6 rounded-xl bg-konoha-orange hover:bg-konoha-terracotta text-white font-extrabold text-base sm:text-lg shadow-lg shadow-orange-900/25 active:scale-[0.98] transition-all duration-200 cursor-pointer text-center uppercase tracking-wider"
+      >
+        Rodar dados
+      </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TELA 2: REVELAÇÃO INDIVIDUAL (LOOTBOX/GACHA) -->
+    <!-- ========================================== -->
+    <div 
+      v-else-if="tela === 'revelacao'" 
+      class="w-full max-w-lg mx-auto flex flex-col items-center justify-center py-4"
+    >
+      <!-- Barra Superior de Controle -->
+      <div class="w-full flex items-center justify-between mb-4 px-2 text-white text-xs sm:text-sm font-semibold">
+        <span class="bg-stone-900/80 px-3 py-1 rounded-full border border-stone-700/60 shadow">
+          Carta {{ cartaAtualIndex + 1 }} de 9
+        </span>
+        <button 
+          @click="pularParaVisaoGeral"
+          class="text-stone-300 hover:text-white underline underline-offset-4 decoration-stone-500 hover:decoration-white transition-colors cursor-pointer"
+        >
+          Pular para Visão Geral ⏩
+        </button>
+      </div>
+
+      <!-- Container do Deck de Cartas Empilhadas (3D Perspective) -->
+      <div class="perspective-1000 w-[280px] sm:w-[320px] h-[430px] sm:h-[480px] my-3 relative flex items-center justify-center">
+        <!-- Renderiza as cartas empilhadas no deck -->
+        <div 
+          v-for="(card, idx) in cartas"
+          :key="card.uuid || idx"
+          class="absolute inset-0 w-full h-full transition-all duration-500 ease-out select-none"
+          :style="obterEstiloDeck(idx)"
+        >
+          <!-- Card 3D Flip Individual -->
+          <div 
+            @click="idx === cartaAtualIndex ? girarEAvancar() : null"
+            class="w-full h-full relative transform-style-3d transition-transform duration-700 cursor-pointer"
+            :class="{ 'rotate-y-180': card.revelado }"
+          >
+            <!-- VERSO DA CARTA (Costas viradas para baixo) -->
+            <div 
+              class="absolute inset-0 w-full h-full backface-hidden rounded-2xl bg-gradient-to-br from-stone-900 via-stone-800 to-stone-950 border-4 border-amber-600/70 shadow-2xl flex flex-col items-center justify-between p-5 text-center overflow-hidden hover:border-amber-400 transition-colors"
+            >
+              <!-- Detalhes de canto -->
+              <div class="absolute top-2 left-2 text-amber-500/40 text-xs">◆</div>
+              <div class="absolute top-2 right-2 text-amber-500/40 text-xs">◆</div>
+              <div class="absolute bottom-2 left-2 text-amber-500/40 text-xs">◆</div>
+              <div class="absolute bottom-2 right-2 text-amber-500/40 text-xs">◆</div>
+
+              <div class="w-full flex justify-center pt-2">
+                <span class="text-[10px] tracking-widest text-amber-500/80 uppercase font-title">RPG STAR • DECK</span>
+              </div>
+
+              <!-- Brasão Ninja Central -->
+              <div class="flex flex-col items-center justify-center gap-2">
+                <div class="w-20 h-20 rounded-full border-2 border-dashed border-amber-500/50 flex items-center justify-center bg-stone-950/60 shadow-inner">
+                  <span class="text-3xl text-amber-400 font-black font-title">忍</span>
+                </div>
+                <p class="text-xs text-stone-400 uppercase tracking-widest font-semibold mt-2">
+                  {{ idx === cartaAtualIndex ? 'Toque para girar' : '' }}
+                </p>
+              </div>
+
+              <div class="w-full flex justify-center pb-2">
+                <span class="text-[10px] tracking-widest text-stone-500">CARTA {{ idx + 1 }}/9</span>
+              </div>
+            </div>
+
+            <!-- FRENTE DA CARTA (Revelada) -->
+            <div 
+              class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-2xl bg-stone-900 border-4 shadow-2xl flex flex-col p-3 overflow-hidden text-white"
+              :class="[obterClasseBorda(card), obterClasseBrilho(card)]"
+            >
+              <!-- Topo do Card -->
+              <div class="w-full flex items-center justify-between gap-2 border-b border-stone-800 pb-2 mb-2">
+                <span 
+                  class="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider"
+                  :class="card.badge"
+                >
+                  {{ card.rankLabel }}
+                </span>
+                <span class="text-[10px] text-stone-400 font-mono">
+                  d100: {{ card.roll }}
+                </span>
+              </div>
+
+              <!-- Nome do Item -->
+              <h3 class="text-center font-bold text-sm sm:text-base text-stone-100 px-1 line-clamp-2 min-h-[2.5rem] flex items-center justify-center">
+                {{ card.nome }}
+              </h3>
+
+              <!-- Imagem Central -->
+              <div class="w-full flex-1 my-2 bg-stone-950 rounded-xl overflow-hidden border border-stone-800 flex items-center justify-center p-1 relative">
+                <img 
+                  :src="card.imagem" 
+                  :alt="card.nome"
+                  class="w-full h-full object-contain rounded-lg transition-transform duration-300 hover:scale-105"
+                  loading="eager"
+                />
+              </div>
+
+              <!-- Parte inferior sem conteúdo -->
+              <div class="w-full h-14 sm:h-16 rounded-xl bg-stone-950/80 border border-stone-800/80 flex items-center justify-center">
+                <span class="text-[10px] text-stone-600 tracking-widest uppercase">
+                  ✦ ✦ ✦
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botões de Ação na Revelação -->
+      <div class="w-[280px] sm:w-[320px] mt-5 flex flex-col gap-2">
+        <button 
+          @click="girarEAvancar"
+          :disabled="animandoTransicao"
+          class="w-full py-3.5 px-5 rounded-xl text-white font-extrabold text-base shadow-xl active:scale-[0.98] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 select-none"
+          :class="animandoTransicao ? 'bg-stone-700 cursor-wait' : 'bg-konoha-orange hover:bg-konoha-terracotta shadow-orange-950/40'"
+        >
+          <span v-if="!cartaAtual.revelado">Girar Carta ({{ cartaAtualIndex + 1 }}/9) 🎴</span>
+          <span v-else-if="animandoTransicao">Revelando próximo... ⏳</span>
+          <span v-else-if="cartaAtualIndex < 8">Próxima Carta →</span>
+          <span v-else>Ver Todos os Drops 🏆</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TELA 3: VISÃO GERAL (TODOS OS 9 CARDS)    -->
+    <!-- ========================================== -->
+    <div 
+      v-else-if="tela === 'visao_geral'" 
+      class="w-full max-w-5xl mx-auto flex flex-col items-center py-4"
+    >
+      <!-- Cabeçalho da Visão Geral -->
+      <div class="text-center mb-6 px-4">
+        <h2 class="text-2xl sm:text-3xl font-black text-white font-title uppercase tracking-wide">
+          Resultado da Mineração
+        </h2>
+        <p class="text-stone-300 text-xs sm:text-sm mt-1">
+          9 drops obtidos com as rolagens do d100
+        </p>
+      </div>
+
+      <!-- Grid com os 9 Cards Retangulares -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full px-2">
+        <div 
+          v-for="(card, idx) in cartas" 
+          :key="card.uuid || idx"
+          class="rounded-xl bg-stone-900 border-2 shadow-xl flex flex-col p-2.5 sm:p-3 text-white transition-transform hover:-translate-y-1 duration-200"
+          :class="[obterClasseBorda(card), obterClasseBrilho(card)]"
+        >
+          <!-- Topo do Card -->
+          <div class="w-full flex items-center justify-between gap-1 mb-1.5 border-b border-stone-800 pb-1">
+            <span 
+              class="px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-black uppercase tracking-wider"
+              :class="card.badge"
+            >
+              {{ card.rankLabel }}
+            </span>
+            <span class="text-[9px] sm:text-[10px] text-stone-400 font-mono">
+              d100: {{ card.roll }}
+            </span>
+          </div>
+
+          <!-- Nome do Item -->
+          <h4 class="text-center font-bold text-xs sm:text-sm text-stone-100 line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem] flex items-center justify-center">
+            {{ card.nome }}
+          </h4>
+
+          <!-- Imagem do Item -->
+          <div class="w-full h-28 sm:h-36 my-1.5 bg-stone-950 rounded-lg overflow-hidden border border-stone-800 flex items-center justify-center p-1">
+            <img 
+              :src="card.imagem" 
+              :alt="card.nome"
+              class="w-full h-full object-contain rounded"
+            />
+          </div>
+
+          <!-- Parte inferior sem conteúdo -->
+          <div class="w-full h-6 sm:h-8 rounded bg-stone-950/70 border border-stone-800/80 flex items-center justify-center">
+            <span class="text-[8px] text-stone-600 tracking-widest">✦ ✦ ✦</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Ações Inferior (Copiar / Nova Rodada) -->
+      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md px-4">
+        <!-- Botão Copiar -->
+        <button 
+          @click="copiarResultado"
+          class="w-full py-3.5 px-6 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-sm sm:text-base shadow-lg active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
+        >
+          <span>{{ textoBotaoCopiar }}</span>
+        </button>
+
+        <!-- Botão Rodar Novamente -->
+        <button 
+          @click="rodarNovamente"
+          class="w-full py-3.5 px-6 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-600 text-white font-bold text-sm sm:text-base shadow active:scale-[0.98] transition-all cursor-pointer text-center"
+        >
+          Rodar Novamente 🔄
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Script Modular da Aplicação -->
+  <script type="module">
+    import { sortear9Loots } from './assets/loot-data.js';
+
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+      setup() {
+        const tela = ref('inicio'); // 'inicio' | 'revelacao' | 'visao_geral'
+        const cartas = ref([]);
+        const cartaAtualIndex = ref(0);
+        const animandoTransicao = ref(false);
+        const textoBotaoCopiar = ref('Copiar Resultado (Discord/Zap) 📋');
+        let timerTransicao = null;
+
+        const cartaAtual = computed(() => {
+          return cartas.value[cartaAtualIndex.value] || {};
+        });
+
+        const iniciarMineracao = () => {
+          cartas.value = sortear9Loots();
+          cartaAtualIndex.value = 0;
+          animandoTransicao.value = false;
+          if (timerTransicao) clearTimeout(timerTransicao);
+          tela.value = 'revelacao';
+        };
+
+        const revelarCartaAtual = () => {
+          if (!cartaAtual.value) return;
+          cartaAtual.value.revelado = true;
+
+          // Se for Rank S ou Rank A, soltar confetes
+          if (cartaAtual.value.rank === 'S') {
+            dispararConfetes(true);
+          } else if (cartaAtual.value.rank === 'A') {
+            dispararConfetes(false);
+          }
+        };
+
+        const girarEAvancar = () => {
+          if (animandoTransicao.value) return;
+
+          // Se a carta ainda não foi revelada, vira ela e agenda o avanço automático
+          if (!cartaAtual.value.revelado) {
+            revelarCartaAtual();
+            animandoTransicao.value = true;
+
+            // Tempo para contemplar a carta antes de passar automaticamente
+            const tempoEspera = (cartaAtual.value.rank === 'S' || cartaAtual.value.rank === 'A') ? 1600 : 1200;
+
+            timerTransicao = setTimeout(() => {
+              avancarParaProximaOuGeral();
+            }, tempoEspera);
+          } else {
+            // Se já estava revelada e o usuário clicou de novo, avança na hora
+            if (timerTransicao) clearTimeout(timerTransicao);
+            avancarParaProximaOuGeral();
+          }
+        };
+
+        const avancarParaProximaOuGeral = () => {
+          animandoTransicao.value = false;
+          if (cartaAtualIndex.value < 8) {
+            cartaAtualIndex.value++;
+          } else {
+            irParaVisaoGeral();
+          }
+        };
+
+        const proximaCarta = () => {
+          avancarParaProximaOuGeral();
+        };
+
+        const irParaVisaoGeral = () => {
+          if (timerTransicao) clearTimeout(timerTransicao);
+          animandoTransicao.value = false;
+          // Garante que todas as cartas fiquem marcadas como reveladas
+          cartas.value.forEach(c => c.revelado = true);
+          tela.value = 'visao_geral';
+        };
+
+        const pularParaVisaoGeral = () => {
+          irParaVisaoGeral();
+        };
+
+        const rodarNovamente = () => {
+          tela.value = 'inicio';
+        };
+
+        const obterClasseBorda = (card) => {
+          switch (card.rank) {
+            case 'S': return 'border-yellow-400';
+            case 'A': return 'border-purple-500';
+            case 'B': return 'border-sky-500';
+            case 'C': return 'border-emerald-500';
+            case 'D': return 'border-amber-700';
+            default: return 'border-stone-500';
+          }
+        };
+
+        const obterClasseBrilho = (card) => {
+          if (!card.revelado) return '';
+          switch (card.rank) {
+            case 'S': return 'glow-rank-s';
+            case 'A': return 'glow-rank-a';
+            case 'B': return 'glow-rank-b';
+            case 'C': return 'glow-rank-c';
+            default: return '';
+          }
+        };
+
+        const obterEstiloDeck = (idx) => {
+          const diff = idx - cartaAtualIndex.value;
+
+          if (diff === 0) {
+            // Carta ativa no topo do deck
+            return {
+              zIndex: 35,
+              transform: 'translate(0px, 0px) scale(1) rotate(0deg)',
+              opacity: 1,
+              pointerEvents: 'auto'
+            };
+          } else if (diff < 0) {
+            // Cartas já reveladas acumulando atrás (como um deck jogado)
+            const profundidade = Math.min(Math.abs(diff), 5);
+            const rot = (diff % 2 === 0 ? 3.5 : -3.5) * Math.min(profundidade, 2);
+            const desvioX = (diff % 2 === 0 ? 8 : -8) * Math.min(profundidade, 3);
+            const desvioY = -profundidade * 7;
+            return {
+              zIndex: 25 - profundidade,
+              transform: `translate(${desvioX}px, ${desvioY}px) scale(${1 - profundidade * 0.035}) rotate(${rot}deg)`,
+              opacity: Math.max(0.4, 1 - profundidade * 0.12),
+              pointerEvents: 'none'
+            };
+          } else {
+            // Cartas ainda por vir empilhadas embaixo do deck principal
+            const profundidade = Math.min(diff, 4);
+            return {
+              zIndex: 20 - profundidade,
+              transform: `translate(0px, ${profundidade * 6}px) scale(${1 - profundidade * 0.025})`,
+              opacity: diff <= 3 ? 1 : 0,
+              pointerEvents: 'none'
+            };
+          }
+        };
+
+        const dispararConfetes = (isLendario) => {
+          if (typeof confetti === 'function') {
+            confetti({
+              particleCount: isLendario ? 120 : 60,
+              spread: isLendario ? 90 : 60,
+              origin: { y: 0.6 },
+              colors: isLendario ? ['#facc15', '#eab308', '#ffffff', '#fb923c'] : ['#a855f7', '#c084fc', '#ffffff']
+            });
+          }
+        };
+
+        const copiarResultado = async () => {
+          const rankIcons = {
+            'S': '🟡 [RANK S]',
+            'A': '🟣 [RANK A]',
+            'B': '🔵 [RANK B]',
+            'C': '🟢 [RANK C]',
+            'D': '🟤 [RANK D]',
+            'Comum': '⚪ [COMUM]'
+          };
+
+          let texto = `⛏️ **RESULTADO DA MINERAÇÃO - RPG STAR** ⛏️\n\n`;
+          cartas.value.forEach((card, idx) => {
+            const icon = rankIcons[card.rank] || '📦';
+            texto += `${idx + 1}. ${icon} **${card.nome}** (d100: ${card.roll})\n`;
+          });
+          texto += `\n*Gerado pela Ferramenta de Loot - RPG STAR*`;
+
+          try {
+            await navigator.clipboard.writeText(texto);
+            textoBotaoCopiar.value = 'Copiado com Sucesso! ✅';
+            setTimeout(() => {
+              textoBotaoCopiar.value = 'Copiar Resultado (Discord/Zap) 📋';
+            }, 2500);
+          } catch (err) {
+            console.error('Erro ao copiar: ', err);
+          }
+        };
+
+        return {
+          tela,
+          cartas,
+          cartaAtualIndex,
+          cartaAtual,
+          animandoTransicao,
+          girarEAvancar,
+          textoBotaoCopiar,
+          iniciarMineracao,
+          revelarCartaAtual,
+          proximaCarta,
+          irParaVisaoGeral,
+          pularParaVisaoGeral,
+          rodarNovamente,
+          obterClasseBorda,
+          obterClasseBrilho,
+          obterEstiloDeck,
+          copiarResultado
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
