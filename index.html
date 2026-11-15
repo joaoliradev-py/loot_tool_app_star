@@ -352,7 +352,7 @@
         const cartas = ref([]);
         const cartaAtualIndex = ref(0);
         const animandoTransicao = ref(false);
-        const textoBotaoCopiar = ref('Copiar Resultado (Discord/Zap) 📋');
+        const textoBotaoCopiar = ref('Copie o resultado 📋');
         let timerTransicao = null;
 
         const cartaAtual = computed(() => {
@@ -519,27 +519,34 @@
 
         const copiarResultado = async () => {
           const rankIcons = {
-            'S+': '🔥 [RANK S+]',
-            'S': '🟡 [RANK S]',
-            'A': '🟣 [RANK A]',
-            'B': '🔵 [RANK B]',
-            'C': '🟢 [RANK C]',
-            'D': '🟤 [RANK D]',
-            'Comum': '⚪ [COMUM]'
+            'S+': '🔥 [Rank S+]',
+            'S': '🟡 [Rank S]',
+            'A': '🟣 [Rank A]',
+            'B': '🔵 [Rank B]',
+            'C': '🟢 [Rank C]',
+            'D': '🟤 [Rank D]',
+            'Comum': '⚪ [Comum]'
           };
 
-          let texto = `⛏️ **RESULTADO DA MINERAÇÃO - RPG STAR** ⛏️\n\n`;
+          let texto = `═══════════════════════\n`;
+          texto += `⛏️ *MINERAÇÃO • RPG STAR* ⛏️\n`;
+          texto += `═══════════════════════\n\n`;
+          texto += `📦 *Drops Obtidos (9 Dados):*\n\n`;
+
           cartas.value.forEach((card, idx) => {
             const icon = rankIcons[card.rank] || '📦';
-            texto += `${idx + 1}. ${icon} **${card.nome}** (d100: ${card.roll})\n`;
+            texto += `${idx + 1}. ${icon} *${card.nome}* ➔ d100: ${card.roll}\n`;
           });
-          texto += `\n*Gerado pela Ferramenta de Loot - RPG STAR*`;
+
+          texto += `\n───────────────────────\n`;
+          texto += `✨ *Sessão concluída com sucesso!* 🥷\n`;
+          texto += `*Ferramenta de Loot • RPG STAR*`;
 
           try {
             await navigator.clipboard.writeText(texto);
             textoBotaoCopiar.value = 'Copiado com Sucesso! ✅';
             setTimeout(() => {
-              textoBotaoCopiar.value = 'Copiar Resultado (Discord/Zap) 📋';
+              textoBotaoCopiar.value = 'Copie o resultado 📋';
             }, 2500);
           } catch (err) {
             console.error('Erro ao copiar: ', err);
