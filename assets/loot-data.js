@@ -162,11 +162,14 @@ export function rolarD100() {
   };
 }
 
-// Sorteia os 9 itens
-export function sortear9Loots() {
+// Sorteia os 10 itens (10-pull estilo gacha)
+export function sortear10Loots() {
   const loots = [];
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 10; i++) {
     loots.push(rolarD100());
   }
   return loots;
 }
+
+// Alias para compatibilidade
+export const sortear9Loots = sortear10Loots;

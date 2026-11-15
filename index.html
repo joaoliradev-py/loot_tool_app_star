@@ -144,7 +144,7 @@
       <!-- Barra Superior de Controle -->
       <div class="w-full flex items-center justify-between mb-4 px-2 text-white text-xs sm:text-sm font-semibold">
         <span class="bg-stone-900/80 px-3 py-1 rounded-full border border-stone-700/60 shadow">
-          Carta {{ cartaAtualIndex + 1 }} de 9
+          Carta {{ cartaAtualIndex + 1 }} de 10
         </span>
         <button 
           @click="pularParaVisaoGeral"
@@ -194,7 +194,7 @@
               </div>
 
               <div class="w-full flex justify-center pb-2">
-                <span class="text-[10px] tracking-widest text-stone-500">CARTA {{ idx + 1 }}/9</span>
+                <span class="text-[10px] tracking-widest text-stone-500">CARTA {{ idx + 1 }}/10</span>
               </div>
             </div>
 
@@ -250,20 +250,20 @@
           class="w-full py-3.5 px-5 rounded-xl text-white font-extrabold text-base shadow-xl active:scale-[0.98] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 select-none"
           :class="animandoTransicao ? 'bg-stone-700 cursor-wait' : 'bg-konoha-orange hover:bg-konoha-terracotta shadow-orange-950/40'"
         >
-          <span v-if="!cartaAtual.revelado">Girar Carta ({{ cartaAtualIndex + 1 }}/9) 🎴</span>
+          <span v-if="!cartaAtual.revelado">Girar Carta ({{ cartaAtualIndex + 1 }}/10) 🎴</span>
           <span v-else-if="animandoTransicao">Revelando próximo... ⏳</span>
-          <span v-else-if="cartaAtualIndex < 8">Próxima Carta →</span>
+          <span v-else-if="cartaAtualIndex < 9">Próxima Carta →</span>
           <span v-else>Ver Todos os Drops 🏆</span>
         </button>
       </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- TELA 3: VISÃO GERAL (TODOS OS 9 CARDS)    -->
+    <!-- TELA 3: VISÃO GERAL (TODOS OS 10 CARDS)    -->
     <!-- ========================================== -->
     <div 
       v-else-if="tela === 'visao_geral'" 
-      class="w-full max-w-5xl mx-auto flex flex-col items-center py-4"
+      class="w-full max-w-6xl mx-auto flex flex-col items-center py-4"
     >
       <!-- Cabeçalho da Visão Geral -->
       <div class="text-center mb-6 px-4">
@@ -271,12 +271,12 @@
           Resultado da Mineração
         </h2>
         <p class="text-stone-300 text-xs sm:text-sm mt-1">
-          9 drops obtidos com as rolagens do d100
+          10 drops obtidos com as rolagens do d100
         </p>
       </div>
 
-      <!-- Grid com os 9 Cards Retangulares -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full px-2">
+      <!-- Grid com os 10 Cards Retangulares (5x2 no desktop / 2x5 no mobile) -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 w-full px-2">
         <div 
           v-for="(card, idx) in cartas" 
           :key="card.uuid || idx"
@@ -342,7 +342,7 @@
 
   <!-- Script Modular da Aplicação -->
   <script type="module">
-    import { sortear9Loots } from './assets/loot-data.js';
+    import { sortear10Loots } from './assets/loot-data.js';
 
     const { createApp, ref, computed } = Vue;
 
@@ -360,7 +360,7 @@
         });
 
         const iniciarMineracao = () => {
-          cartas.value = sortear9Loots();
+          cartas.value = sortear10Loots();
           cartaAtualIndex.value = 0;
           animandoTransicao.value = false;
           if (timerTransicao) clearTimeout(timerTransicao);
@@ -404,7 +404,7 @@
 
         const avancarParaProximaOuGeral = () => {
           animandoTransicao.value = false;
-          if (cartaAtualIndex.value < 8) {
+          if (cartaAtualIndex.value < 9) {
             cartaAtualIndex.value++;
           } else {
             irParaVisaoGeral();
@@ -531,7 +531,7 @@
           let texto = `═══════════════════════\n`;
           texto += `⛏️ *MINERAÇÃO • RPG STAR* ⛏️\n`;
           texto += `═══════════════════════\n\n`;
-          texto += `📦 *Drops Obtidos (9 Dados):*\n\n`;
+          texto += `📦 *Drops Obtidos (10 Dados):*\n\n`;
 
           cartas.value.forEach((card, idx) => {
             const icon = rankIcons[card.rank] || '📦';
@@ -539,7 +539,7 @@
           });
 
           texto += `\n───────────────────────\n`;
-          texto += `✨ *Sessão concluída com sucesso!* 🥷\n`;
+          texto += `✨ *Sessão concluída com sucesso! (10 Drops)* 🥷\n`;
           texto += `*Ferramenta de Loot • RPG STAR*`;
 
           try {
